@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイルーム・シミュレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .step-icon { background-color: #1a237e; }
+        .btn-primary {
+            background-color: #283593;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover { background-color: #1a237e; }
+        .btn-secondary {
+             background-color: #e8eaf6;
+             color: #3f51b5;
+             transition: background-color 0.3s;
+        }
+        .btn-secondary:hover { background-color: #c5cae9; }
+        .btn-secondary:disabled {
+            background-color: #e8eaf6;
+            color: #9fa8da;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .dropzone {
+            border: 2px dashed #9fa8da;
+            transition: background-color 0.3s;
+        }
+        .dropzone.dragover {
+            background-color: #e8eaf6;
+            border-style: solid;
+        }
+        #composition-area {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            background-color: #e0e0e0;
+            user-select: none;
+        }
+        #room-photo-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        #artwork-container {
+            position: absolute;
+            top: 30%;
+            left: 30%;
+            width: 40%;
+            height: 40%;
+            border: 2px dashed rgba(255, 255, 255, 0.7);
+            cursor: move;
+        }
+        #artwork-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #333;
+            border-radius: 50%;
+        }
+        .resize-handle.br {
+            bottom: -6px;
+            right: -6px;
+            cursor: se-resize;
+        }
+        .spinner {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+         @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">マイルーム・シミュレーター</h1>
+            <p class="mt-2 text-gray-600">ご自身の部屋の写真に、作品を合成して飾ってみましょう。</p>
+        </header>
+
+        <main class="bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-8">
+
+            <!-- Step 1: Upload Artwork -->
+            <section id="step1" class="flex items-start space-x-4">
+                <div class="step-icon text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">1</div>
+                <div class="w-full">
+                    <h2 class="text-xl font-bold text-gray-700">作品画像をアップロード</h2>
+                    <div id="artwork-dropzone" class="dropzone rounded-lg p-6 text-center cursor-pointer mt-4">
+                        <input type="file" id="artwork-upload" class="hidden" accept="image/*">
+                        <p id="artwork-dropzone-text">クリックして作品を選択<br>またはドラッグ＆ドロップ</p>
+                        <img id="artwork-preview" class="hidden max-h-32 mx-auto mt-4 rounded">
+                    </div>
+                    <div id="artwork-tools" class="mt-4 text-center hidden">
+                        <button id="remove-bg-btn" class="btn-secondary text-sm font-semibold py-2 px-4 rounded-lg inline-flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-magic mr-2" viewBox="0 0 16 16">
+                                <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0v1.829Zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 0 0 .707.707L14 2.707a.5.5 0 0 0 0-.707ZM7.293 4L8 3.293a.5.5 0 0 0-.707-.707L6.586 3.586a.5.5 0 0 0 .707.707ZM5 6.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Zm-.5 3.915a.5.5 0 1 0 1 0v-1.83a.5.5 0 1 0-1 0v1.83Zm1.83-1.082a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1ZM10.5 13.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Zm-3.5-.035a.5.5 0 0 1 .707-.707l1.147 1.147a.5.5 0 0 1-.707.707L6.293 13.5l.707-.707ZM12.707 9.5a.5.5 0 1 1 0 1 .5.5 0 0 1 0-1ZM8.5 4.5a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0ZM14.5 6h-1.829a.5.5 0 1 0 0 1H14.5a.5.5 0 0 0 0-1ZM2.373 9.5a.5.5 0 1 0-1 0v.843a.5.5 0 1 0 1 0V9.5Zm1.829 1.082a.5.5 0 1 0 0 1H.843a.5.5 0 0 0 0-1h1.359Z"/>
+                            </svg>
+                            背景を自動で切り抜く
+                        </button>
+                        <p id="status-message" class="text-sm text-center mt-2 h-4"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Upload Room Photo -->
+            <section id="step2" class="flex items-start space-x-4 opacity-50 pointer-events-none">
+                <div class="step-icon text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">2</div>
+                <div class="w-full">
+                    <h2 class="text-xl font-bold text-gray-700">お部屋の写真をアップロード</h2>
+                    <div id="room-dropzone" class="dropzone rounded-lg p-6 text-center cursor-pointer mt-4">
+                        <input type="file" id="room-upload" class="hidden" accept="image/*">
+                        <p id="room-dropzone-text">クリックしてお部屋の写真を選択<br>またはドラッグ＆ドロップ</p>
+                        <img id="room-preview" class="hidden max-h-32 mx-auto mt-4 rounded">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 3: Composition -->
+            <section id="step3" class="hidden">
+                <div class="flex items-start space-x-4">
+                    <div class="step-icon text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">3</div>
+                    <div class="w-full">
+                        <h2 class="text-xl font-bold text-gray-700">合成と調整</h2>
+                        <p class="text-sm text-gray-500 mb-4">作品をドラッグして移動、右下の●をドラッグしてサイズを変更できます。</p>
+                        <div id="composition-area" class="rounded-lg">
+                            <img id="room-photo-bg" src="">
+                            <div id="artwork-container">
+                                <img id="artwork-img" src="">
+                                <div class="resize-handle br"></div>
+                            </div>
+                        </div>
+                        <button id="generate-btn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg mt-6">これで生成</button>
+                        <button id="restart-btn-step3" class="w-full text-center py-3 px-4 rounded-lg mt-2 hover:bg-gray-100">最初からやり直す</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 4: Final Result -->
+            <section id="step4" class="hidden">
+                <div class="flex items-start space-x-4">
+                    <div class="step-icon text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">4</div>
+                    <div class="w-full">
+                        <h2 class="text-xl font-bold text-gray-700">完成</h2>
+                        <p class="text-sm text-gray-500 mb-4">生成された合成画像です。</p>
+                        <div id="result-container" class="rounded-lg bg-gray-200">
+                             <img id="result-image" class="w-full h-auto">
+                        </div>
+                        <button id="save-btn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg mt-6">合成した画像を保存</button>
+                        <button id="back-btn" class="w-full text-center py-3 px-4 rounded-lg mt-2 hover:bg-gray-100">調整に戻る</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Element References ---
+        const artworkDropzone = document.getElementById('artwork-dropzone');
+        const artworkUpload = document.getElementById('artwork-upload');
+        const artworkPreview = document.getElementById('artwork-preview');
+        const artworkDropzoneText = document.getElementById('artwork-dropzone-text');
+        const artworkTools = document.getElementById('artwork-tools');
+        const removeBgBtn = document.getElementById('remove-bg-btn');
+        const statusMessage = document.getElementById('status-message');
+
+        const roomDropzone = document.getElementById('room-dropzone');
+        const roomUpload = document.getElementById('room-upload');
+        const roomPreview = document.getElementById('room-preview');
+        const roomDropzoneText = document.getElementById('room-dropzone-text');
+        
+        const compositionArea = document.getElementById('composition-area');
+        const roomPhotoBg = document.getElementById('room-photo-bg');
+        const artworkContainer = document.getElementById('artwork-container');
+        const artworkImg = document.getElementById('artwork-img');
+        const resizeHandle = document.querySelector('.resize-handle');
+        
+        const generateBtn = document.getElementById('generate-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const restartBtnStep3 = document.getElementById('restart-btn-step3');
+        const backBtn = document.getElementById('back-btn');
+        const resultImage = document.getElementById('result-image');
+
+
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        const step4 = document.getElementById('step4');
+
+        // --- State ---
+        let artworkDataUrl = null;
+        let roomDataUrl = null;
+
+        // --- File Upload Logic ---
+        function setupDropzone(dropzone, input, onFile) {
+            dropzone.addEventListener('click', () => input.click());
+            input.addEventListener('change', (e) => onFile(e.target.files[0]));
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => {
+                dropzone.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+            });
+            ['dragenter', 'dragover'].forEach(eName => {
+                dropzone.addEventListener(eName, () => dropzone.classList.add('dragover'), false);
+            });
+            ['dragleave', 'drop'].forEach(eName => {
+                dropzone.addEventListener(eName, () => dropzone.classList.remove('dragover'), false);
+            });
+            dropzone.addEventListener('drop', (e) => onFile(e.dataTransfer.files[0]), false);
+        }
+
+        setupDropzone(artworkDropzone, artworkUpload, (file) => {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                artworkDataUrl = e.target.result;
+                artworkPreview.src = artworkDataUrl;
+                artworkPreview.classList.remove('hidden');
+                artworkDropzoneText.classList.add('hidden');
+                artworkTools.classList.remove('hidden');
+                step2.classList.remove('opacity-50', 'pointer-events-none');
+                checkIfReady();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        setupDropzone(roomDropzone, roomUpload, (file) => {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                roomDataUrl = e.target.result;
+                roomPreview.src = roomDataUrl;
+                roomPreview.classList.remove('hidden');
+                roomDropzoneText.classList.add('hidden');
+                checkIfReady();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        removeBgBtn.addEventListener('click', async () => {
+            if (!artworkDataUrl) return;
+
+            statusMessage.textContent = '背景を切り抜き中です...';
+            statusMessage.classList.remove('text-red-500', 'text-green-600');
+            statusMessage.classList.add('text-gray-500');
+            removeBgBtn.disabled = true;
+            const originalButtonContent = removeBgBtn.innerHTML;
+            removeBgBtn.innerHTML = '<span class="spinner"></span>';
+
+
+            try {
+                const base64Image = artworkDataUrl.split(',')[1];
+                const prompt = "この写真から主要な被写体（掛け軸、額、屏風など）だけを正確に切り抜き、それ以外の背景をすべて完全に透明にしてください。";
+
+                const response = await fetch('/.netlify/functions/generate', {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        image: base64Image
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({error: 'サーバーエラー'}));
+                    throw new Error(errorData.error || '切り抜きに失敗しました。');
+                }
+
+                const data = await response.json();
+
+                if (data.base64) {
+                    artworkDataUrl = `data:image/png;base64,${data.base64}`;
+                    artworkPreview.src = artworkDataUrl;
+                    artworkImg.src = artworkDataUrl;
+                    statusMessage.textContent = '背景の切り抜きが完了しました！';
+                    statusMessage.classList.add('text-green-600');
+                } else {
+                    throw new Error('AIから画像データが返されませんでした。');
+                }
+
+            } catch (error) {
+                console.error("Background removal error:", error);
+                statusMessage.textContent = `エラー: ${error.message}`;
+                statusMessage.classList.add('text-red-500');
+            } finally {
+                removeBgBtn.disabled = false;
+                removeBgBtn.innerHTML = originalButtonContent;
+                setTimeout(() => { statusMessage.textContent = ''; }, 4000);
+            }
+        });
+        
+        function checkIfReady() {
+            if (artworkDataUrl && roomDataUrl) {
+                step1.classList.add('hidden');
+                step2.classList.add('hidden');
+                step3.classList.remove('hidden');
+                startComposition();
+            }
+        }
+        
+        function startComposition() {
+            const roomImg = new Image();
+            roomImg.onload = () => {
+                const aspectRatio = roomImg.width / roomImg.height;
+                compositionArea.style.aspectRatio = aspectRatio;
+                roomPhotoBg.src = roomDataUrl;
+                artworkImg.src = artworkDataUrl;
+            };
+            roomImg.src = roomDataUrl;
+        }
+
+        // --- Drag and Resize Logic ---
+        let isDragging = false, isResizing = false;
+        let startX, startY, startLeft, startTop, startWidth, startHeight;
+
+        artworkContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (e.target === resizeHandle) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = artworkContainer.offsetLeft;
+            startTop = artworkContainer.offsetTop;
+            compositionArea.style.cursor = 'grabbing';
+        });
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = artworkContainer.offsetWidth;
+            startHeight = artworkContainer.offsetHeight;
+            compositionArea.style.cursor = 'se-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                artworkContainer.style.left = `${startLeft + dx}px`;
+                artworkContainer.style.top = `${startTop + dy}px`;
+            } else if (isResizing) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                artworkContainer.style.width = `${startWidth + dx}px`;
+                artworkContainer.style.height = `${startHeight + dy}px`;
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isResizing = false;
+            compositionArea.style.cursor = 'default';
+        });
+
+        // --- Generate, Save and Restart Logic ---
+        function generateFinalImage(callback) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const roomImg = new Image();
+            roomImg.crossOrigin = "anonymous";
+            roomImg.src = roomPhotoBg.src;
+            roomImg.onload = () => {
+                canvas.width = roomImg.naturalWidth;
+                canvas.height = roomImg.naturalHeight;
+                ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
+
+                const artImg = new Image();
+                artImg.crossOrigin = "anonymous";
+                artImg.src = artworkImg.src;
+                artImg.onload = () => {
+                    const compRect = compositionArea.getBoundingClientRect();
+                    const artRect = artworkContainer.getBoundingClientRect();
+                    
+                    const scaleX = canvas.width / compRect.width;
+                    const scaleY = canvas.height / compRect.height;
+
+                    const artX = (artRect.left - compRect.left) * scaleX;
+                    const artY = (artRect.top - compRect.top) * scaleY;
+                    const artWidth = artRect.width * scaleX;
+                    const artHeight = artRect.height * scaleY;
+
+                    ctx.drawImage(artImg, artX, artY, artWidth, artHeight);
+                    
+                    callback(canvas.toDataURL('image/png'));
+                };
+            };
+        }
+        
+        generateBtn.addEventListener('click', () => {
+            generateFinalImage((imageDataUrl) => {
+                resultImage.src = imageDataUrl;
+                step3.classList.add('hidden');
+                step4.classList.remove('hidden');
+            });
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = resultImage.src;
+            link.download = 'my-room-simulation.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        backBtn.addEventListener('click', () => {
+            step4.classList.add('hidden');
+            step3.classList.remove('hidden');
+        });
+        
+        [restartBtnStep3].forEach(btn => {
+            btn.addEventListener('click', () => location.reload());
+        });
+    });
+    </script>
+</body>
+</html>
+
