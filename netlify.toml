@@ -1,9 +1,21 @@
-# Netlifyのサーバー機能（Functions）を使うための基本設定です。
-[functions]
-  node_bundler = "esbuild"
+    # このファイルはNetlify（建設会社）への指示書です。
 
-# "generate"という名前のサーバー機能に関する、追加の設定です。
-[functions."generate"]
-  # AIの処理には時間がかかることがあるため、タイムアウトの時間を30秒に延長します。
-  timeout = 30
+    # サイトの建設（ビルド）に関する指示
+    [build]
+      # フロントエンドに特別なビルド作業は不要であることを伝えます。
+      command = "echo 'No build step required'"
+      # 公開するサイトの本体がある場所を指定します。（ルートディレクトリ）
+      publish = "."
+      # 工房（サーバープログラム）がある場所を明確に指定します。
+      functions = "netlify/functions"
+
+    # 工房（サーバープログラム）の組み立て方に関する指示
+    [functions]
+      node_bundler = "esbuild"
+
+    # "generate"という名前の工房に関する、追加の指示
+    [functions."generate"]
+      # AIの処理には時間がかかることがあるため、タイムアウトの時間を30秒に延長します。
+      timeout = 30
+    
 
