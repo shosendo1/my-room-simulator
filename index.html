@@ -276,8 +276,6 @@
                 const base64Image = artworkDataUrl.split(',')[1];
                 const prompt = "この写真から主要な被写体（掛け軸、額、屏風など）だけを正確に切り抜き、それ以外の背景をすべて完全に透明にしてください。";
                 
-                // This app is deployed at my-room-simulator.netlify.app
-                // The function will be at /.netlify/functions/generate
                 const url = `https://my-room-simulator.netlify.app/.netlify/functions/generate?t=${new Date().getTime()}`;
 
                 const response = await fetch(url, {
