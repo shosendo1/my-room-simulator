@@ -42,10 +42,8 @@ exports.handler = async (event) => {
         contents: [{
             parts: [{ text: prompt }, imagePart]
         }],
-        generationConfig: {
-            // Request a PNG response to support transparency
-            responseMimeType: "image/png",
-        }
+        // FIX: Removed incorrect generationConfig that caused the error.
+        // This model does not use response_mime_type in generationConfig.
     };
 
     const apiResponse = await fetch(apiUrl, {
