@@ -1,33 +1,19 @@
-// Netlify function to securely handle API calls to Google Gemini
-// This function acts as a proxy, hiding the API key from the frontend.
-// This function is specifically for the "My Room Simulator" and handles background removal.
-
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// CORS headers to allow requests from any origin.
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// Netlify function for My Room Simulator
+// This function handles background removal using an image-editing model.
 
 exports.handler = async (event) => {
-  // Handle preflight requests (for CORS)
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers,
-      body: '',
-    };
+    return { statusCode: 204, headers, body: '' };
   }
 
-  // Only allow POST requests
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
@@ -35,10 +21,6 @@ exports.handler = async (event) => {
     if (!apiKey) {
       throw new Error("APIキーがサーバーに設定されていません。");
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use the image-editing capable model ("nano-banana")
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image-preview" });
 
     const { prompt, image } = JSON.parse(event.body);
     if (!prompt || !image) {
@@ -48,17 +30,48 @@ exports.handler = async (event) => {
     const imagePart = {
       inlineData: {
         data: image,
-        mimeType: "image/jpeg", // Assuming JPEG/PNG from upload
+        mimeType: "image/jpeg", // Can be jpeg or png
       },
     };
-
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
     
-    const image_parts = response.candidates[0].content.parts.filter(part => part.inlineData);
-    if(image_parts.length === 0){
+    const modelToUse = "gemini-2.5-flash-image-preview";
+    // FIX: Ensure the v1beta endpoint is used, as required by this model
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`;
+
+    const payload = {
+        contents: [{
+            parts: [{ text: prompt }, imagePart]
+        }],
+        generationConfig: {
+            // Request a PNG response to support transparency
+            responseMimeType: "image/png",
+        }
+    };
+
+    const apiResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!apiResponse.ok) {
+        const errorBody = await apiResponse.json().catch(() => ({}));
+        console.error("Google API Error:", errorBody);
+        const errorMessage = errorBody?.error?.message || 'Google APIでエラーが発生しました。';
+         if (errorMessage.includes("API key not valid")) {
+            throw new Error('Google APIからエラーが返されました。APIキーまたは請求設定をご確認ください。');
+        }
+        throw new Error(errorMessage);
+    }
+    
+    const result = await apiResponse.json();
+    const image_parts = result.candidates?.[0]?.content?.parts?.filter(part => part.inlineData);
+
+    if (!image_parts || image_parts.length === 0) {
+        console.error("No image parts in API response:", result);
         throw new Error("AIが画像の切り抜きに失敗しました。");
     }
+
     const base64Data = image_parts[0].inlineData.data;
 
     return {
@@ -69,14 +82,6 @@ exports.handler = async (event) => {
 
   } catch (error) {
     console.error('Error in Netlify function:', error);
-    // Check for specific API key error from Google
-    if (error.message && error.message.includes("API key not valid")) {
-         return {
-            statusCode: 401, // Unauthorized
-            headers,
-            body: JSON.stringify({ error: 'Google APIからエラーが返されました。APIキーまたは請求設定をご確認ください。' }),
-        };
-    }
     return {
       statusCode: 500,
       headers,
