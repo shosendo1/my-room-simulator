@@ -1,0 +1,9 @@
+# Netlifyのサーバー機能（Functions）を使うための基本設定です。
+[functions]
+  node_bundler = "esbuild"
+
+# "generate"という名前のサーバー機能に関する、追加の設定です。
+[functions."generate"]
+  # AIの処理には時間がかかることがあるため、タイムアウトの時間を30秒に延長します。
+  timeout = 30
+
