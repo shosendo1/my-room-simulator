@@ -275,8 +275,12 @@
             try {
                 const base64Image = artworkDataUrl.split(',')[1];
                 const prompt = "この写真から主要な被写体（掛け軸、額、屏風など）だけを正確に切り抜き、それ以外の背景をすべて完全に透明にしてください。";
+                
+                // This app is deployed at my-room-simulator.netlify.app
+                // The function will be at /.netlify/functions/generate
+                const url = `https://my-room-simulator.netlify.app/.netlify/functions/generate?t=${new Date().getTime()}`;
 
-                const response = await fetch('/.netlify/functions/generate', {
+                const response = await fetch(url, {
                     method: 'POST',
                     mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -305,12 +309,16 @@
 
             } catch (error) {
                 console.error("Background removal error:", error);
-                statusMessage.textContent = `エラー: ${error.message}`;
+                 let detailedErrorMessage = error.message;
+                 if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                    detailedErrorMessage = "サーバーとの通信に失敗しました。一時的なネットワークの問題か、サーバー側の設定が原因の可能性があります。しばらくしてから再試行してください。";
+                }
+                statusMessage.innerHTML = `エラー:<br>${detailedErrorMessage}`;
                 statusMessage.classList.add('text-red-500');
             } finally {
                 removeBgBtn.disabled = false;
                 removeBgBtn.innerHTML = originalButtonContent;
-                setTimeout(() => { statusMessage.textContent = ''; }, 4000);
+                setTimeout(() => { statusMessage.textContent = ''; }, 7000);
             }
         });
         
